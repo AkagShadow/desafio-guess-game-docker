@@ -47,7 +47,7 @@ Para instalar e rodar a aplicação, siga os passos abaixo. Certifique-se de ter
 
 1.  **Clone o repositório deste desafio:**
     ```bash
-    git clone [https://github.com/AkagShadow/desafio-guess-game-docker.git](https://github.com/AkagShadow/desafio-guess-game-docker.git)
+    git clone https://github.com/AkagShadow/desafio-guess-game-docker.git
     cd desafio-guess-game-docker
     ```
 
