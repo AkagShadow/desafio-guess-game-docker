@@ -2,10 +2,8 @@
 # Usa uma imagem Node.js para instalar dependências e construir o projeto.
 FROM node:18-alpine AS build
 
-# Define um argumento de construção que será passado para o Dockerfile
-# ARG REACT_APP_BACKEND_URL=/api
-# Define o argumento de construção para a URL completa do backend
-ARG REACT_APP_BACKEND_URL=http://localhost:5000
+# Define o argumento de construção para a URL RELATIVA do backend via NGINX
+ARG REACT_APP_BACKEND_URL=/api
 
 # Define o diretório de trabalho dentro do container para este estágio.
 WORKDIR /app
@@ -20,18 +18,16 @@ RUN npm install
 # Copia todo o restante do código-fonte do frontend para o diretório de trabalho.
 COPY . .
 
+# Passa o argumento de construção para o ambiente no momento do build
 ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
 
 # Constrói a aplicação React para produção.
 # Isso irá gerar os arquivos estáticos (HTML, CSS, JS) na pasta 'build'.
 RUN REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL npm run build
 
-
 # Estágio 2: Servindo a aplicação com NGINX
-# Usa uma imagem NGINX leve para servir os arquivos estáticos.
-# alpine é uma versão bem pequena do Linux.
+# Adicione esta linha: Define a imagem base para o estágio do NGINX
 FROM nginx:alpine
-
 
 # Remove a configuração padrão do NGINX.
 RUN rm /etc/nginx/conf.d/default.conf

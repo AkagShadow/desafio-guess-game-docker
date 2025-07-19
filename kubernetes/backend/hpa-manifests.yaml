@@ -1,0 +1,22 @@
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler # Objeto para autoescalamento de Pods
+metadata:
+  name: backend-hpa # Nome do HPA
+  labels:
+    app: guess-game
+    tier: backend
+spec:
+  scaleTargetRef: # Referência ao Deployment que o HPA irá escalar
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend-deployment # O HPA vai escalar o Deployment do Backend
+  minReplicas: 1 # Número mínimo de Pods para o Backend
+  maxReplicas: 5 # Número máximo de Pods para o Backend (ajustável conforme necessidade)
+  metrics: # Métricas que o HPA vai observar para tomar decisões de escala
+    - type: Resource # Tipo de métrica: baseada em recursos (CPU, memória)
+      resource:
+        name: cpu # Nome do recurso a ser observado (CPU)
+        target:
+          type: Utilization # Tipo de alvo: utilização percentual
+          averageUtilization: 50 # Escalar quando a utilização média de CPU atingir 50% das requisições

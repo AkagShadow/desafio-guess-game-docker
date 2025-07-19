@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim # Solicita um volume persistente
+metadata:
+  name: postgres-pvc
+  labels:
+    app: guess-game
+spec:
+  accessModes:
+    - ReadWriteOnce # O volume pode ser montado como leitura/escrita por um único nó
+  resources:
+    requests:
+      storage: 250Mi # Solicita 250 Mebibytes de armazenamento (ajuste conforme necessário)
+---
+apiVersion: apps/v1
+kind: Deployment # Gerencia um conjunto de réplicas de Pods
+metadata:
+  name: postgres-deployment
+  labels:
+    app: guess-game
+    tier: database
+spec:
+  replicas: 1 # Apenas uma réplica para o banco de dados (não escalável por padrão)
+  selector:
+    matchLabels:
+      app: guess-game
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: guess-game
+        tier: database
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:13-alpine # Usamos a mesma imagem do Docker Compose
+          ports:
+            - containerPort: 5432 # Porta padrão do PostgreSQL
+          env: # Variáveis de ambiente para o PostgreSQL
+            - name: POSTGRES_DB
+              value: guessgame
+            - name: POSTGRES_USER
+              value: user
+            - name: POSTGRES_PASSWORD
+              value: password
+          volumeMounts: # Monta o volume persistente dentro do container
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data # Caminho onde o PostgreSQL armazena seus dados
+          livenessProbe: # Verifica se o container está rodando e responsivo
+            exec:
+              command: ["pg_isready", "-U", "user", "-d", "guessgame"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe: # Verifica se o container está pronto para aceitar tráfego
+            exec:
+              command: ["pg_isready", "-U", "user", "-d", "guessgame"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes: # Define o volume que será montado
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc # Referencia o PVC que criamos
+---
+apiVersion: v1
+kind: Service # Expõe o Deployment internamente no cluster
+metadata:
+  name: postgres-service
+  labels:
+    app: guess-game
+    tier: database
+spec:
+  selector:
+    app: guess-game
+    tier: database
+  ports:
+    - protocol: TCP
+      port: 5432 # Porta do Service
+      targetPort: 5432 # Porta do container (containerPort no Deployment)
+  type: ClusterIP # Tipo de Service: só acessível dentro do cluster

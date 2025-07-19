@@ -1,0 +1,80 @@
+---
+apiVersion: apps/v1
+kind: Deployment # Gerencia a aplicação Backend Flask
+metadata:
+  name: backend-deployment
+  labels:
+    app: guess-game
+    tier: backend
+spec:
+  replicas: 1 # Começamos com uma réplica; o HPA vai escalar
+  selector:
+    matchLabels:
+      app: guess-game
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: guess-game
+        tier: backend
+    spec:
+      containers:
+        - name: flask-backend
+          image: willdias/guess-game-backend:1.0.0 # Sua imagem do Docker Hub
+          ports:
+            - containerPort: 5000 # Porta que o Flask escuta dentro do container
+          env: # Variáveis de ambiente para a aplicação Flask
+            - name: DB_TYPE
+              value: postgres # Define o tipo de banco de dados como PostgreSQL
+            - name: DB_NAME
+              value: guessgame
+            - name: DB_USER
+              value: user
+            - name: DB_PASSWORD
+              value: password
+            - name: DB_HOST # O nome do host para o banco de dados é o nome do Service do Postgres
+              value: postgres-service
+            - name: FLASK_APP
+              value: run.py
+            - name: FLASK_ENV
+              value: production
+          livenessProbe: # Verifica se o container está vivo
+            httpGet:
+              path: /health # Rota de health check da aplicação Flask
+              port: 5000
+            initialDelaySeconds: 30 
+            periodSeconds: 30
+            timeoutSeconds: 5 
+            failureThreshold: 3 
+          readinessProbe: # Verifica se o container está pronto para aceitar tráfego
+            httpGet:
+              path: /health # Rota de health check da aplicação Flask
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5 
+            failureThreshold: 3
+          resources: # Define limites e requisições de recursos (importante para HPA)
+            requests:
+              cpu: "100m" # Requisita 100 milicores de CPU
+              memory: "128Mi" # Requisita 128 Mebibytes de memória
+            limits:
+              cpu: "500m" # Limita a 500 milicores de CPU
+              memory: "256Mi" # Limita a 256 Mebibytes de memória
+---
+apiVersion: v1
+kind: Service # Expõe o Deployment do Backend internamente no cluster
+metadata:
+  name: backend-service # Nome do Service que o Frontend usará para se conectar
+  labels:
+    app: guess-game
+    tier: backend
+spec:
+  selector:
+    app: guess-game
+    tier: backend
+  ports:
+    - protocol: TCP
+      port: 5000 # Porta do Service
+      targetPort: 5000 # Porta do container (containerPort no Deployment)
+  type: ClusterIP # Tipo de Service: só acessível dentro do cluster

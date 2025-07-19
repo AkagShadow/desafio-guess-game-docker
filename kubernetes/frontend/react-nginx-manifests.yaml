@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: Deployment # Gerencia a aplicação Frontend React (servida por NGINX)
+metadata:
+  name: frontend-deployment
+  labels:
+    app: guess-game
+    tier: frontend
+spec:
+  replicas: 1 # Começamos com uma réplica
+  selector:
+    matchLabels:
+      app: guess-game
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: guess-game
+        tier: frontend
+    spec:
+      containers:
+        - name: nginx-frontend
+          image: willdias/guess-game-frontend:1.0.0 #imagem no Docker Hub
+          ports:
+            - containerPort: 80 # Porta padrão do NGINX
+          livenessProbe: # Verifica se o NGINX está rodando
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe: # Verifica se o NGINX está pronto para servir
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources: # Boas práticas para alocação de recursos
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service # Expõe o Deployment do Frontend externamente (fachada)
+metadata:
+  name: frontend-service
+  labels:
+    app: guess-game
+    tier: frontend
+spec:
+  selector:
+    app: guess-game
+    tier: frontend
+  ports:
+    - protocol: TCP
+      port: 80 # Porta do Service (acessível externamente)
+      targetPort: 80 # Porta do container NGINX
+  type: NodePort # Tipo de Service para expor o frontend para fora do cluster
